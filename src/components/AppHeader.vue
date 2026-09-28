@@ -1,12 +1,12 @@
 <script setup>
-import { ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { nextTick, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import logoUrl from '../../assets/images/logo.png'
 
 const navItems = [
-  { label: '客户端下载', to: { path: '/', hash: '#download' } },
-  { label: '使用场景', to: { path: '/', hash: '#scenarios' } },
-  { label: '用户评价', to: { path: '/', hash: '#testimonials' } },
+  { label: '客户端下载', sectionId: 'download' },
+  { label: '使用场景', sectionId: 'scenarios' },
+  { label: '用户评价', sectionId: 'testimonials' },
   {
     label: '软件教程',
     isMenu: true,
@@ -18,18 +18,30 @@ const navItems = [
 ]
 
 const route = useRoute()
+const router = useRouter()
 const isMobileMenuOpen = ref(false)
+const activeDesktopMenu = ref('')
 
-const getHash = (to) => (typeof to === 'object' ? to.hash : '')
+const scrollToSection = async (sectionId) => {
+  if (!sectionId) return
 
-const scrollToHash = (hash) => {
-  if (!hash || window.location.hash !== hash) return
+  if (route.path !== '/') {
+    await router.push({ path: '/' })
+    await nextTick()
+  }
 
-  const target = document.querySelector(hash)
+  const target = document.getElementById(sectionId)
+  const headerHeight = document.querySelector('.app-header')?.offsetHeight ?? 0
 
-  target?.scrollIntoView({
+  if (!target) return
+
+  if (window.location.hash) {
+    window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search)
+  }
+
+  window.scrollTo({
+    top: target.getBoundingClientRect().top + window.scrollY - headerHeight,
     behavior: 'smooth',
-    block: 'start',
   })
 }
 
@@ -37,23 +49,47 @@ const closeMobileMenu = () => {
   isMobileMenuOpen.value = false
 }
 
+const closeDesktopMenu = () => {
+  activeDesktopMenu.value = ''
+}
+
+const openDesktopMenu = (item) => {
+  if (!item.isMenu) return
+
+  activeDesktopMenu.value = item.label
+}
+
+const showDesktopMenu = (item) => {
+  if (!item.isMenu) return
+
+  activeDesktopMenu.value = item.label
+}
+
+const handleDesktopMenuFocusOut = (event) => {
+  if (event.currentTarget.contains(event.relatedTarget)) return
+
+  closeDesktopMenu()
+}
+
 const toggleMobileMenu = () => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value
 }
 
-const handleNavClick = (to) => {
-  scrollToHash(getHash(to))
+const handleNavClick = (item) => {
+  closeDesktopMenu()
+  scrollToSection(item.sectionId)
 }
 
-const handleMobileNavClick = (to) => {
+const handleMobileNavClick = (item) => {
   closeMobileMenu()
-  scrollToHash(getHash(to))
+  scrollToSection(item.sectionId)
 }
 
 watch(
   () => route.fullPath,
   () => {
     closeMobileMenu()
+    closeDesktopMenu()
   },
 )
 </script>
@@ -61,24 +97,44 @@ watch(
 <template>
   <header class="app-header" :class="{ 'app-header--menu-open': isMobileMenuOpen }">
     <div class="app-header__inner">
-      <RouterLink class="brand" to="/" aria-label="同声传译助手首页">
+      <RouterLink class="brand" to="/" aria-label="影优尽优-同声传译助手首页">
         <img class="brand-logo" :src="logoUrl" alt="" />
-        <span class="brand-name">同声传译助手</span>
+        <span class="brand-copy">
+          <span class="brand-name">同声传译助手</span>
+          <span class="brand-tagline">-影优尽优 · 直播生态-</span>
+        </span>
       </RouterLink>
 
       <nav class="nav-menu" aria-label="主导航">
         <template v-for="item in navItems" :key="item.label">
-          <div class="nav-item" :class="{ 'nav-item--menu': item.isMenu }">
-            <RouterLink
+          <div
+            class="nav-item"
+            :class="{
+              'nav-item--menu': item.isMenu,
+              'nav-item--open': activeDesktopMenu === item.label,
+            }"
+            @mouseenter="openDesktopMenu(item)"
+            @mouseleave="closeDesktopMenu"
+            @focusin="openDesktopMenu(item)"
+            @focusout="handleDesktopMenuFocusOut"
+          >
+            <button
               v-if="!item.isMenu"
-              :to="item.to"
               class="nav-link"
-              @click="handleNavClick(item.to)"
+              type="button"
+              @click="handleNavClick(item)"
             >
               {{ item.label }}
-            </RouterLink>
+            </button>
 
-            <button v-if="item.isMenu" class="nav-link nav-link--menu" type="button">
+            <button
+              v-if="item.isMenu"
+              class="nav-link nav-link--menu"
+              type="button"
+              aria-haspopup="menu"
+              :aria-expanded="activeDesktopMenu === item.label"
+              @click="showDesktopMenu(item)"
+            >
               <span>{{ item.label }}</span>
               <span class="nav-link__arrow" aria-hidden="true"></span>
             </button>
@@ -90,6 +146,7 @@ watch(
                 :to="child.to"
                 class="nav-popover__link"
                 role="menuitem"
+                @click="closeDesktopMenu"
               >
                 {{ child.label }}
               </RouterLink>
@@ -120,14 +177,14 @@ watch(
       aria-label="移动端导航"
     >
       <template v-for="item in navItems" :key="item.label">
-        <RouterLink
+        <button
           v-if="!item.isMenu"
-          :to="item.to"
           class="mobile-nav-link"
-          @click="handleMobileNavClick(item.to)"
+          type="button"
+          @click="handleMobileNavClick(item)"
         >
           {{ item.label }}
-        </RouterLink>
+        </button>
 
         <div v-else class="mobile-nav-group">
           <div class="mobile-nav-group__title">{{ item.label }}</div>
@@ -173,7 +230,7 @@ watch(
   align-items: center;
   min-width: 0;
   flex: 0 0 auto;
-  gap: 10px;
+  gap: 20px;
   color: #111827;
   text-decoration: none;
   transition: transform 220ms ease;
@@ -185,15 +242,31 @@ watch(
 
 .brand-logo {
   display: block;
-  width: 45px;
-  height: 45px;
+  width: 60px;
+  height: 60px;
+}
+
+.brand-copy {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
 }
 
 .brand-name {
-  min-width: 0;
-  font-size: 18px;
+  color: #111827;
+  font-size: 22px;
   font-weight: 700;
   line-height: 1;
+  white-space: nowrap;
+}
+
+.brand-tagline {
+  padding: 2px 4px;
+  color: #06356f;
+  font-size: 12px;
+  line-height: 1.2;
+  letter-spacing: 0;
+  text-align: center;
   white-space: nowrap;
 }
 
@@ -285,14 +358,12 @@ watch(
     transform 180ms ease;
 }
 
-.nav-item--menu:hover .nav-link--menu,
-.nav-item--menu:focus-within .nav-link--menu {
+.nav-item--open .nav-link--menu {
   color: #2563eb;
   transform: translateY(-2px);
 }
 
-.nav-item--menu:hover .nav-link__arrow,
-.nav-item--menu:focus-within .nav-link__arrow {
+.nav-item--open .nav-link__arrow {
   margin-top: 2px;
   transform: rotate(225deg);
 }
@@ -330,8 +401,7 @@ watch(
   transform: translateX(-50%) rotate(45deg);
 }
 
-.nav-item:hover .nav-popover,
-.nav-item:focus-within .nav-popover {
+.nav-item--open .nav-popover {
   opacity: 1;
   pointer-events: auto;
   transform: translate(-50%, 0);
@@ -395,15 +465,20 @@ watch(
   }
 
   .brand-logo {
-    width: 38px;
-    height: 38px;
+    width: 48px;
+    height: 48px;
+  }
+
+  .brand-copy {
+    gap: 3px;
   }
 
   .brand-name {
-    overflow: hidden;
-    font-size: 16px;
-    color: #111827;
-    text-overflow: ellipsis;
+    font-size: 18px;
+  }
+
+  .brand-tagline {
+    font-size: 12px;
   }
 
   .mobile-menu-button {
@@ -465,21 +540,26 @@ watch(
     box-shadow: 0 18px 34px rgba(15, 23, 42, 0.1);
   }
 
-  .mobile-nav-link {
-    display: flex;
-    align-items: center;
-    min-height: 44px;
-    padding: 0 12px;
-    border-radius: 8px;
-    color: #111827;
-    font-size: 15px;
-    line-height: 1.2;
-    text-decoration: none;
-    overflow-wrap: anywhere;
-    transition:
-      color 180ms ease,
-      background 180ms ease;
-  }
+.mobile-nav-link {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  color: #111827;
+  background: transparent;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.2;
+  text-decoration: none;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  transition:
+    color 180ms ease,
+    background 180ms ease;
+}
 
   .mobile-nav-link:hover {
     color: #1268ff;
@@ -534,12 +614,12 @@ watch(
   }
 
   .brand-logo {
-    width: 34px;
-    height: 34px;
+    width: 44px;
+    height: 44px;
   }
 
   .brand-name {
-    font-size: 15px;
+    font-size: 17px;
   }
 
   .mobile-menu-button {

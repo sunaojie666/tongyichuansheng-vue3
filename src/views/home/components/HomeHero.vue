@@ -4,7 +4,10 @@ import downloadIconUrl from '../../../../assets/images/icon-download-client.png'
 import tutorialIconUrl from '../../../../assets/images/icon-view-tutorial.png'
 import starUrl from '../../../../assets/images/star.png'
 import worldUrl from '../../../../assets/images/world.png'
+import { useDownloadClient } from '../../../composables/useDownloadClient'
 import HomeStats from './HomeStats.vue'
+
+const { downloadStatus, downloadStatusType, handleDownloadClient, isDownloading } = useDownloadClient()
 </script>
 
 <template>
@@ -27,7 +30,13 @@ import HomeStats from './HomeStats.vue'
         </p>
 
         <div class="hero-actions">
-          <a class="download-button is-active" href="#">
+          <a
+            class="download-button is-active"
+            :class="{ 'download-button--loading': isDownloading }"
+            href="#"
+            :aria-disabled="isDownloading"
+            @click.prevent="handleDownloadClient"
+          >
             <img :src="downloadIconUrl" alt="" aria-hidden="true" />
             下载客户端
           </a>
@@ -36,6 +45,15 @@ import HomeStats from './HomeStats.vue'
             查看教程
           </RouterLink>
         </div>
+
+        <p
+          v-if="downloadStatus"
+          class="download-status"
+          :class="`download-status--${downloadStatusType}`"
+          role="status"
+        >
+          {{ downloadStatus }}
+        </p>
 
         <p class="hero-note">
           <span>◎</span>
@@ -200,6 +218,12 @@ import HomeStats from './HomeStats.vue'
     0 0 0 1px rgba(255, 255, 255, 0.2) inset;
 }
 
+.download-button--loading {
+  cursor: wait;
+  opacity: 0.72;
+  pointer-events: none;
+}
+
 .download-button img {
   filter: brightness(0) invert(1);
 }
@@ -216,6 +240,26 @@ import HomeStats from './HomeStats.vue'
   border-color: rgba(18, 104, 255, 0.28);
   color: #1268ff;
   background: #ffffff;
+}
+
+.download-status {
+  min-height: 20px;
+  margin: 11px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.download-status--loading {
+  color: #64748b;
+}
+
+.download-status--success {
+  color: #16805b;
+}
+
+.download-status--error {
+  color: #c24141;
 }
 
 .hero-note {

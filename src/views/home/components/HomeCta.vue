@@ -1,6 +1,9 @@
 <script setup>
 import bgUrl from '../../../../assets/images/cta-bg.png'
 import downloadIconUrl from '../../../../assets/images/icon-download-client-cta.png'
+import { useDownloadClient } from '../../../composables/useDownloadClient'
+
+const { downloadStatus, downloadStatusType, handleDownloadClient, isDownloading } = useDownloadClient()
 </script>
 
 <template>
@@ -8,10 +11,23 @@ import downloadIconUrl from '../../../../assets/images/icon-download-client-cta.
     <div class="cta-content">
       <h2>同声传译在手，跨境沟通无忧</h2>
       <p>告别语言障碍，让沟通更简单高效</p>
-      <a href="#">
+      <a
+        href="#"
+        :class="{ 'is-loading': isDownloading }"
+        :aria-disabled="isDownloading"
+        @click.prevent="handleDownloadClient"
+      >
         <img :src="downloadIconUrl" alt="" aria-hidden="true" />
         下载客户端
       </a>
+      <p
+        v-if="downloadStatus"
+        class="download-status"
+        :class="`download-status--${downloadStatusType}`"
+        role="status"
+      >
+        {{ downloadStatus }}
+      </p>
     </div>
   </section>
 </template>
@@ -34,15 +50,19 @@ import downloadIconUrl from '../../../../assets/images/icon-download-client-cta.
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: min(100%, 1154px);
-  padding: 0 14px;
-  margin-top: -8px;
+  justify-content: center;
+  width: 100%;
+  max-width: 1154px;
+  padding: 0 24px;
+  margin: 0 auto;
   color: #ffffff;
   text-align: center;
 }
 
 .cta-content h2 {
-  margin: 0;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
   color: #ffffff;
   font-size: 56px;
   font-weight: 800;
@@ -51,7 +71,9 @@ import downloadIconUrl from '../../../../assets/images/icon-download-client-cta.
 }
 
 .cta-content p {
-  margin: 18px 0 0;
+  width: 100%;
+  max-width: 760px;
+  margin: 18px auto 0;
   color: rgba(255, 255, 255, 0.92);
   font-size: 28px;
   line-height: 1;
@@ -75,11 +97,33 @@ import downloadIconUrl from '../../../../assets/images/icon-download-client-cta.
   text-decoration: none;
 }
 
+.cta-content a.is-loading {
+  cursor: wait;
+  opacity: 0.72;
+  pointer-events: none;
+}
+
 .cta-content a img {
   display: block;
   width: 25px;
   height: 25px;
   object-fit: contain;
+}
+
+.cta-content .download-status {
+  min-height: 24px;
+  margin: 13px 0 0;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.cta-content .download-status--success {
+  color: #c7ffe9;
+}
+
+.cta-content .download-status--error {
+  color: #ffe0e0;
 }
 
 @media (max-width: 960px) {

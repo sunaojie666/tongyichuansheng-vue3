@@ -7,6 +7,18 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
+    proxy: {
+      '/download-api': {
+        target: 'https://www.vicastcam.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/download-api/, ''),
+      },
+      '/download-file': {
+        target: 'https://cdn.vicastcam.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/download-file/, ''),
+      },
+    },
   },
   preview: {
     host: '0.0.0.0',
